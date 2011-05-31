@@ -1,0 +1,9 @@
+wsshd is a remote login server over websockets.
+The wssh protocol is incomplete and has no formal specification.
+
+Clients connect to ws(s)://host/sh and request a login session.  The server
+allocates a new pseudo-terminal and serves a new login process on it.  Data is
+transmitted in utf8-encoded JSON message structures.
+
+A Javascript client implementation can be found at https://github.com/krockot/wssh
+
