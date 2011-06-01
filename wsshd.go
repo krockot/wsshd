@@ -142,7 +142,7 @@ func main() {
 			notSoGood = true
 		} else {
 			fmt.Fprintln(os.Stderr,
-				"Cannot use TLS without a cert and key.  Use -dontcare to serve without encrpytion.")
+				"Cannot use TLS without a cert and key.  Use -dontcare to serve without encryption.")
 			return
 		}
 	}
