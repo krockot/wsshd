@@ -5,7 +5,6 @@ import(
 	"github.com/krockot/goterm/term"
 	"websocket"
 	"http"
-	"fmt"
 	"io"
 	"os"
 	"syscall"
@@ -16,15 +15,16 @@ type Client struct {
 	conn io.ReadWriteCloser
 	tty *term.Terminal
 	pid int
+	quit chan bool
 }
 
 func (c *Client) Close() os.Error {
-	if c.pid > 0 {
-		syscall.Kill(c.pid, 1)
-		os.Wait(c.pid, os.WNOHANG)
-	}
 	if c.tty != nil {
 		c.tty.Close()
+	}
+	if c.pid > 0 {
+		syscall.Kill(c.pid, 1)
+		os.Wait(c.pid, 0)
 	}
 	c.conn.Close()
 	return nil
@@ -61,13 +61,16 @@ func HandleLogin(c *Client) LoginHandlerFunc {
 					break
 				}
 			}
-			c.Close()
+			c.quit <- true
 		}()
 
 		go func() {
 			t := time.NewTicker(1e9)
 			for {
 				select {
+				case <-c.quit:
+					c.Close()
+					return
 				case <-t.C:
 					msg, err := os.Wait(c.pid, os.WNOHANG)
 					if err == nil && msg.Pid == c.pid {
@@ -109,7 +112,7 @@ func HandleWindow(c *Client) WindowHandlerFunc {
 }
 
 func ShellHandler(ws *websocket.Conn) {
-	c := &Client{conn: ws}
+	c := &Client{conn: ws, quit: make(chan bool, 2)}
 
 	mp := NewMessageProcessor(ws)
 	mp.HandleLogin(HandleLogin(c))
@@ -118,7 +121,7 @@ func ShellHandler(ws *websocket.Conn) {
 	mp.HandleWindow(HandleWindow(c))
 	for {
 		if err := mp.ProcessNext(); err != nil {
-			fmt.Printf("Closing: %s\n", err.String())
+			c.quit <- true
 			return
 		}
 	}
