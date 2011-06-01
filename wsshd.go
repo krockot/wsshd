@@ -9,6 +9,8 @@ import(
 	"os"
 	"syscall"
 	"time"
+	"flag"
+	"fmt"
 )
 
 type Client struct {
@@ -128,7 +130,34 @@ func ShellHandler(ws *websocket.Conn) {
 }
 
 func main() {
+	certFile := flag.String("cert", "", "Path to certificate file")
+	keyFile := flag.String("key", "", "Path to private key file")
+	port := flag.String("port", "8022", "Service port")
+	dontCare := flag.Bool("dontcare", false, "Force non-secure mode if no cert or key is given")
+	flag.Parse()
+
+	notSoGood := false
+	if certFile == nil || keyFile == nil {
+		if *dontCare {
+			notSoGood = true
+		} else {
+			fmt.Fprintln(os.Stderr,
+				"Cannot use TLS without a cert and key.  Use -dontcare to serve without encrpytion.")
+			return
+		}
+	}
+
 	http.Handle("/sh", websocket.Handler(ShellHandler))
-	http.ListenAndServe(":8022", nil)
+
+	var err os.Error
+	if notSoGood {
+		err = http.ListenAndServe(":" + *port, nil)
+	} else {
+		err = http.ListenAndServeTLS(":" + *port, *certFile, *keyFile, nil)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s", err.String())
+	}
 }
 
