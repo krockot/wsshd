@@ -137,7 +137,7 @@ func main() {
 	flag.Parse()
 
 	notSoGood := false
-	if certFile == nil || keyFile == nil {
+	if len(*certFile) == 0 || len(*keyFile) == 0 {
 		if *dontCare {
 			notSoGood = true
 		} else {
